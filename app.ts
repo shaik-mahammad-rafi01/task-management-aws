@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import type { Request, Response } from "express";
 import express from "express";
 import sequelize from "./src/sequelize";
+import { userRouter } from "./src/routes/user";
 
 config();
 
@@ -12,7 +13,7 @@ const port = process.env.PORT || 3005;
 app.get("/", (request: Request, response: Response) => {
     response.send("server started");
 });
-
+app.use("/" , userRouter)
 const startServer = async () => {
     try {
         await sequelize.authenticate();
