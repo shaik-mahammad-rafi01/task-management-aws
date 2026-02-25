@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as rds from 'aws-cdk-lib/aws-rds';
 require('dotenv').config();
 export class CdkStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
@@ -13,7 +14,7 @@ export class CdkStack extends cdk.Stack {
       keyPairName: "everest-key-pair",
     })
 
-    const everstEc2Sg = new ec2.SecurityGroup(this, "EC2-instance-sg", {
+    const everstEc2Sg = new ec2.SecurityGroup(this, "EC2InstanceSg", {
       vpc: defaultVpc,
       allowAllOutbound: true
     })
@@ -42,5 +43,33 @@ export class CdkStack extends cdk.Stack {
       securityGroup: everstEc2Sg,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC }
     });
+
+    const rdsSecurityGroup = new ec2.SecurityGroup(this, "RDS-SG", {
+      vpc: defaultVpc,
+      allowAllOutbound: true
+    });
+
+    rdsSecurityGroup.addIngressRule(
+      everstEc2Sg,
+      ec2.Port.tcp(5432),
+      "Allow postgreSQL access from ec2"
+    );
+    const rdsDatabase = new rds.DatabaseInstance(this, "everestDatabase", {
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: rds.PostgresEngineVersion.VER_17,
+      }),
+      vpc: defaultVpc,
+      databaseName: "EverestUsersDb",
+      securityGroups: [rdsSecurityGroup],
+      credentials: rds.Credentials.fromGeneratedSecret("postgres"),
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      publiclyAccessible: false,
+      vpcSubnets : {subnetType : ec2.SubnetType.PUBLIC},
+      instanceType: ec2.InstanceType.of(
+        ec2.InstanceClass.T3,
+        ec2.InstanceSize.MICRO,
+      )
+
+    })
   }
 }
